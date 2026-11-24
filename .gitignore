@@ -1,0 +1,7 @@
+# Build output
+*.o
+/tama
+
+# Copyrighted ROM and its disassembly; supply your own dump
+tama.bin
+tama.asm
