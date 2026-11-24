@@ -2,6 +2,8 @@
 
 **An emulator for the original Tamagotchi digital pet**
 
+![The tama62 emulator window showing the egg on the LCD](tama-screen1.png)
+
 ## Overview
 
 The original Tamagotchi was an incredibly simple yet addictive toy. Its specs are very modest, even for the mid 90's:
@@ -40,6 +42,8 @@ This repository does **not** include the Tamagotchi ROM. You need to supply your
 ```
 
 The monitor shows registers, flags, run state, clock and instruction rates, the stack, memory at MX/MY and the most recent instructions. It needs a terminal at least 80 columns wide. Press **Space** (or **P**) in the terminal to pause the emulator, and again to resume.
+
+![The TUI core monitor showing registers, timing, stack, memory and recent instructions](tama-screen2.png)
 
 Press **Ctrl-C** to stop.
 
