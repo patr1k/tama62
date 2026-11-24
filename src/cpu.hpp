@@ -109,15 +109,61 @@ struct Rom {
     std::array<RomPage, 8> bank1{};
 };
 
+struct LcdFrame {
+    static constexpr uint8_t width = 32;
+    static constexpr uint8_t height = 16;
+    static constexpr uint8_t num_icons = 8;
+    
+    std::array<std::uint32_t, height> screen{};
+    
+    std::array<bool, num_icons> icons{};
+
+    uint8_t contrast = 50;
+
+    bool pixel(int x, int y) const { return (screen[y] >> x) & 1; }
+};
+
+struct RomAddr {
+    std::uint8_t step = 0;
+    uint4_t page = 0;
+    bool bank = false;
+
+    void advance() {
+        step++;
+        if (step == 0) {
+            page++;
+        }
+        if (!bank && page == 16) {
+            bank = true;
+            page = 0;
+        }
+        if (bank && page == 8) {
+            bank = false;
+            page = 0;
+        }
+    }
+};
+
+// One executed instruction, as recorded for the core monitor
+struct InstrRecord {
+    bool bank = false;
+    uint4_t page = 0;
+    std::uint8_t step = 0;
+    std::uint16_t opcode = 0;
+    std::array<char, 24> text{};  // mnemonic, e.g. "LD A, MX"
+};
+
+struct IoReg { uint4_t h, l, mask; };
+constexpr IoReg ALOFF{0x7, 0x1, 0x8};
+constexpr IoReg ALON{0x7, 0x1, 0x4};
+constexpr IoReg LC{0x7, 0x2, 0xF};
+
 class Cpu {
 public:
     // Loads the ROM image. Throws runtime_error if the file can't be opened.
     explicit Cpu(const std::string& rom_path);
 
     void tick();
-
-    // Print registers, flags and all RAM / I/O memory (cpu_dump.cpp)
-    void dump(std::FILE* out = stdout) const;
 
     Flags flags;
     Registers reg;
@@ -126,13 +172,25 @@ public:
     std::uint8_t clock_wait = 0;
     bool halt = false;
 
-    // Print each executed instruction (off by default)
-    bool trace = false;
+    // Keep a ring buffer of recently executed instructions (off by default).
+    // history[history_pos] is the oldest entry / the next slot to be written.
+    bool record_history = false;
+    static constexpr std::size_t history_size = 32;
+    std::array<InstrRecord, history_size> history{};
+    std::size_t history_pos = 0;
+
+    // Execution counters
+    std::uint64_t instr_count = 0;  // instructions executed
+    std::uint64_t halt_ticks = 0;   // ticks spent in HALT
+
+    // Decodes the display RAM into an LCD frame (cpu_lcd.cpp)
+    void lcd_frame(LcdFrame* frame) const;
 
 private:
-    // printf-style instruction log; does nothing unless `trace` is set.
+    // printf-style instruction log; stores the mnemonic in the history if
+    // `record_history` is set, otherwise does nothing.
     // The attribute keeps gcc/clang's format-string checking.
-    [[gnu::format(printf, 2, 3)]] void log_instr(const char* fmt, ...) const;
+    [[gnu::format(printf, 2, 3)]] void log_instr(const char* fmt, ...);
 
     // Nibble helpers for the 8-bit XHL / YHL / SP registers
     static constexpr uint4_t hi(std::uint8_t v) { return v >> 4; }
@@ -143,14 +201,21 @@ private:
     // Names for the 2-bit r/q register operands, used in the instruction logs
     static constexpr std::array<const char*, 4> reg_names = {"A", "B", "MX", "MY"};
 
+    // RAM read/write
     void mem_write(uint4_t page, std::uint8_t step, uint4_t val);
     uint4_t mem_read(uint4_t page, std::uint8_t step) const;
 
+    // IO register helper
+    uint4_t io(IoReg r) const;
+
+    // Register read/write
     void reg_write(uint4_t reg_id, uint4_t val);
     uint4_t reg_read(uint4_t reg_id) const;
 
+    // Instruction lookup
     std::uint16_t prefetch();
 
+    // Stack ops
     void stack_push(uint4_t val);
     uint4_t stack_pop();
 
@@ -159,6 +224,7 @@ private:
     void push_pc();
     void pop_pc();
 
+    // Arithmetic Logic Unit
     uint4_t alu_add(uint4_t a, uint4_t b, bool carry_in = false, bool decimal = true);
     uint4_t alu_sub(uint4_t a, uint4_t b, bool borrow_in = false, bool decimal = true);
     uint4_t alu_and(uint4_t a, uint4_t b);

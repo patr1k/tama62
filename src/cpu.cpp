@@ -2,12 +2,13 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <stdexcept>
 
 namespace {
 
-// Readable / writable bits for each I/O register in page F, one nibble per step.
+// Readable/writable bits for each I/O register in page F, one nibble per step.
 // Indexed by the high nibble of the step; the low nibble selects the nibble within.
 constexpr std::array<std::uint64_t, 16> io_read = {
     0x0000000000FFFFFF,
@@ -45,27 +46,6 @@ constexpr std::array<std::uint64_t, 16> io_write = {
     0x0000000000000000,
     0x0000000000000000,
     0x0000000000000000,
-};
-
-struct RomAddr {
-    std::uint8_t step = 0;
-    uint4_t page = 0;
-    bool bank = false;
-
-    void advance() {
-        step++;
-        if (step == 0) {
-            page++;
-        }
-        if (!bank && page == 16) {
-            bank = true;
-            page = 0;
-        }
-        if (bank && page == 8) {
-            bank = false;
-            page = 0;
-        }
-    }
 };
 
 } // namespace
@@ -165,6 +145,8 @@ uint4_t Cpu::mem_read(uint4_t page, std::uint8_t step) const {
     }
 }
 
+uint4_t Cpu::io(IoReg r) const { return ram.pageF[r.h][r.l] & r.mask; }
+
 uint4_t Cpu::reg_read(uint4_t reg_id) const {
     switch (reg_id) {
         case 0: return reg.A;
@@ -184,13 +166,16 @@ void Cpu::reg_write(uint4_t reg_id, uint4_t val) {
     }
 }
 
-void Cpu::log_instr(const char* fmt, ...) const {
-    if (!trace) return;
+void Cpu::log_instr(const char* fmt, ...) {
+    if (!record_history) return;
 
     va_list args;
     va_start(args, fmt);
-    std::vprintf(fmt, args);
+    std::array<char, 24>& text = history[history_pos].text;
+    std::vsnprintf(text.data(), text.size(), fmt, args);
     va_end(args);
+    // Drop the trailing newline the instruction formats end with
+    if (char* nl = std::strchr(text.data(), '\n')) *nl = '\0';
 }
 
 std::uint16_t Cpu::prefetch() {
@@ -231,9 +216,18 @@ void Cpu::pop_pc() {
 void Cpu::tick() {
     if (clock_wait) { clock_wait--; return; }
 
-    if (halt) return;
+    if (halt) { halt_ticks++; return; }
+
+    if (record_history) {
+        InstrRecord& rec = history[history_pos];
+        rec.bank = reg.PC.PCB;
+        rec.page = reg.PC.PCP;
+        rec.step = reg.PC.PCS;
+        std::snprintf(rec.text.data(), rec.text.size(), "???");
+    }
 
     std::uint16_t instr = prefetch();
+    instr_count++;
 
     uint4_t instr_H4 = instr >> 8;
     std::uint8_t instr_H6 = instr >> 6;
@@ -352,6 +346,11 @@ void Cpu::tick() {
     else if (instr_H10 == 0x3CE)  op_scpx_mx_r(instr);
     else if (instr_H10 == 0x3CF)  op_scpy_my_r(instr);
     else std::printf("%03XH: Not Implemented\n", instr);
+
+    if (record_history) {
+        history[history_pos].opcode = instr;
+        history_pos = (history_pos + 1) % history_size;
+    }
 
     // NBP/NPP only hold a PSET value for the one instruction that follows it.
     // Otherwise they track the current bank/page, so jumps stay on this page.
