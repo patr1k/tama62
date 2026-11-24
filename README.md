@@ -42,7 +42,8 @@ Press **Ctrl-C** to stop. The emulator prints a dump of the CPU registers, flags
 
 ## References
 
-[The Tamagotchi Project](https://cctp506m.github.io/tamagotchi/architecture/)
+- [E0C6S46 Technical Manual](https://download.epson-europe.com/pub/electronics-de/asmic/4bit/62family/technicalmanual/tm_6s46.pdf)
+- [The Tamagotchi Project](https://cctp506m.github.io/tamagotchi/architecture/)
 
 ## License
 
