@@ -20,7 +20,7 @@ The original Tamagotchi was an incredibly simple yet addictive toy. Its specs ar
 - [x] Timers
 - [x] Interrupts
 - [x] LCD Display
-- [ ] Input Ports
+- [x] Input Ports
 - [ ] Sound Generator
 - [x] TUI-style Monitor
 
@@ -40,6 +40,8 @@ This repository does **not** include the Tamagotchi ROM. You need to supply your
 ./tama            # run the emulator
 ./tama --monitor  # show a live CPU core monitor in the terminal (or -m)
 ```
+
+The three device buttons sit below the LCD. Click them with the mouse, or use the **A**, **S** and **D** keys for the left (A), middle (B) and right (C) buttons.
 
 The monitor shows registers, flags, run state, clock and instruction rates, the stack, memory at MX/MY and the most recent instructions. It needs a terminal at least 80 columns wide. Press **Space** (or **P**) in the terminal to pause the emulator, and again to resume.
 

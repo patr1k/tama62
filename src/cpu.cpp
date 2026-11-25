@@ -54,7 +54,9 @@ Cpu::Cpu(const std::string& rom_path) {
     reg.PC.reset();
 
     // Initialize IO registers (everything else starts at zero)
+    ram.pageF[4][0] = 0xF;  // K00-K03: pulled up, no buttons pressed
     ram.pageF[4][1] = 0xF;
+    ram.pageF[4][2] = 0xF;  // K10-K13: pulled up
     ram.pageF[5][4] = 0xF;
     ram.pageF[7][1] = 0x8;
     ram.pageF[7][3] = 0x8;
@@ -107,6 +109,9 @@ void Cpu::mem_write(uint4_t page, std::uint8_t step, uint4_t val) {
 
         io_reg = (io_reg & ~mask) | (val & mask);
         timers_io_write(H, L);
+        if ((H == 0x1 && (L == 0x4 || L == 0x5)) || (H == 0x4 && L == 0x1)) {
+            input_update();
+        }
     } else {
         std::printf("Cannot write to page %X, step %X%XH\n", page, H, L);
     }

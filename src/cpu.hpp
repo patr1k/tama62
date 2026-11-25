@@ -161,12 +161,23 @@ struct TimerState {
     std::uint8_t sw_div = 0;   // 256 Hz ticks since the stopwatch's last SWL count
 };
 
+// Input port interrupt state (cpu_input.cpp). Both groups start matched:
+// all pins are masked at reset.
+struct InputState {
+    bool k0_matched = true;
+    bool k1_matched = true;
+};
+
 class Cpu {
 public:
     // Loads the ROM image. Throws runtime_error if the file can't be opened.
     explicit Cpu(const std::string& rom_path);
 
     void tick();
+
+    // Drive input port K0 (port 0, K00-K03) or K1 (port 1, K10-K13) with a
+    // 4-bit pin level, 1 = high. Pins idle high; a pressed button reads 0.
+    void set_input_port(int port, uint4_t value);
 
     Flags flags;
     Registers reg;
@@ -176,6 +187,7 @@ public:
     bool halt = false;
     bool after_pset = false;  // last instruction was PSET; interrupts wait one more
     TimerState timers;
+    InputState input;
 
     // Keep a ring buffer of recently executed instructions (off by default).
     // history[history_pos] is the oldest entry / the next slot to be written.
@@ -217,6 +229,10 @@ private:
     // Interrupts (cpu_int.cpp). Takes a pending, enabled interrupt if there
     // is one, returning true if it did.
     bool service_interrupt();
+
+    // Input ports (cpu_input.cpp). Re-checks the K0 / K1 interrupt conditions
+    // after a pin, mask (F14H / F15H) or relation register (F41H) changes.
+    void input_update();
 
     // Timers (cpu_timer.cpp)
     void timers_tick();

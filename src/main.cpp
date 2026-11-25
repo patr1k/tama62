@@ -105,6 +105,10 @@ int main(int argc, char* argv[]) {
             if (display && clock::now() >= next_frame) {
                 window_closed = !display->poll_events();
 
+                // Buttons A / B / C are wired to K02 / K01 / K00, active low
+                auto [a, b, c] = display->buttons();
+                cpu.set_input_port(0, 0xF & ~((a ? 0x4 : 0) | (b ? 0x2 : 0) | (c ? 0x1 : 0)));
+
                 LcdFrame frame;
                 cpu.lcd_frame(&frame);
                 display->present(frame);
