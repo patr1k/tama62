@@ -2,16 +2,16 @@
 
 **An emulator for the original Tamagotchi digital pet**
 
-![The tama62 emulator window showing the egg on the LCD](tama-screen1.png)
+![The tama62 emulator window showing the egg on the LCD](tama-screen1.gif)
 
 ## Overview
 
 The original Tamagotchi was an incredibly simple yet addictive toy. Its specs are very modest, even for the mid 90's:
 
-**Processor:** 4-bit CMOS E0C6S46 CPU @ 32.768 kHz
-**Program Memory:** 6,144 x 12-bit words ROM
-**Data Memory:** 640 x 4-bit words RAM
-**Display:** Monochrome 32x20 LCD w/ 160 x 4-bit words
+- **Processor:** 4-bit CMOS E0C6S46 CPU @ 32.768 kHz
+- **Program Memory:** 6,144 x 12-bit words ROM
+- **Data Memory:** 640 x 4-bit words RAM
+- **Display:** Monochrome 32x20 LCD w/ 160 x 4-bit words
 
 ## Emulator Progress
 
@@ -43,7 +43,7 @@ This repository does **not** include the Tamagotchi ROM. You need to supply your
 
 The monitor shows registers, flags, run state, clock and instruction rates, the stack, memory at MX/MY and the most recent instructions. It needs a terminal at least 80 columns wide. Press **Space** (or **P**) in the terminal to pause the emulator, and again to resume.
 
-![The TUI core monitor showing registers, timing, stack, memory and recent instructions](tama-screen2.png)
+![The TUI core monitor showing registers, timing, stack, memory and recent instructions](tama-screen2.gif)
 
 Press **Ctrl-C** to stop.
 
