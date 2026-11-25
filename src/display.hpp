@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <array>
 
 #include "cpu.hpp"
 
@@ -34,7 +35,12 @@ private:
     };
 
     int scale_;
+
+    using TexturePtr = std::unique_ptr<SDL_Texture, SdlDeleter>;
+
     std::unique_ptr<SDL_Window, SdlDeleter> window_;
     std::unique_ptr<SDL_Renderer, SdlDeleter> renderer_;
-    std::unique_ptr<SDL_Texture, SdlDeleter> texture_;  // 32x16, one texel per dot
+    TexturePtr texture_;  // 32x16, one texel per dot
+
+    std::array<TexturePtr, 8> icons_{}; // 64x64, PNG w/ transparency
 };

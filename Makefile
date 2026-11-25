@@ -1,6 +1,6 @@
 CXXFLAGS ?= -std=c++20 -Wall -Wextra -O2 -g
-CXXFLAGS += $(shell pkg-config --cflags sdl2)
-LDLIBS   += $(shell pkg-config --libs sdl2)
+CXXFLAGS += $(shell pkg-config --cflags sdl2 SDL2_image)
+LDLIBS   += $(shell pkg-config --libs sdl2 SDL2_image)
 
 SRC_DIR   := src
 BUILD_DIR := build
