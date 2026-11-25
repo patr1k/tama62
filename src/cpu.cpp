@@ -10,7 +10,7 @@ namespace {
 
 // Readable/writable bits for each I/O register in page F, one nibble per step.
 // Indexed by the high nibble of the step; the low nibble selects the nibble within.
-constexpr std::array<std::uint64_t, 16> io_read = {
+constexpr std::array<std::uint64_t, 16> io_readable = {
     0x0000000000FFFFFF,
     0x0000000000FFFFFF,
     0x00000000FFFFFFFF,
@@ -29,7 +29,7 @@ constexpr std::array<std::uint64_t, 16> io_read = {
     0x0000000000000000,
 };
 
-constexpr std::array<std::uint64_t, 16> io_write = {
+constexpr std::array<std::uint64_t, 16> io_writable = {
     0x0000000000000000,
     0x0000000000FF113F,
     0x00000000FF000000,
@@ -59,9 +59,8 @@ Cpu::Cpu(const std::string& rom_path) {
     ram.pageF[7][1] = 0x8;
     ram.pageF[7][3] = 0x8;
     ram.pageF[7][5] = 0x4;
-    ram.pageF[7][6] = 0x3;
-    ram.pageF[7][7] = 0x2;
-    ram.pageF[7][8] = 0x2;
+    // F76H-F78H: the timer reset bits are write-only and read as 0, and the
+    // timers themselves start out cleared, so these stay zero
 
     // Flash ROM
     std::ifstream file(rom_path, std::ios::binary);
@@ -103,16 +102,17 @@ void Cpu::mem_write(uint4_t page, std::uint8_t step, uint4_t val) {
             std::printf("Cannot write to page E, step %X%XH\n", H, L);
         }
     } else if (page == 0xF) {
-        uint4_t mask = (io_write[H] >> (L * 4)) & 0xF;
+        uint4_t mask = (io_writable[H] >> (L * 4)) & 0xF;
         uint4_t& io_reg = ram.pageF[H][L];
 
         io_reg = (io_reg & ~mask) | (val & mask);
+        timers_io_write(H, L);
     } else {
         std::printf("Cannot write to page %X, step %X%XH\n", page, H, L);
     }
 }
 
-uint4_t Cpu::mem_read(uint4_t page, std::uint8_t step) const {
+uint4_t Cpu::mem_read(uint4_t page, std::uint8_t step) {
     uint4_t H = hi(step);
     uint4_t L = lo(step);
     if (page == 0) {
@@ -138,16 +138,38 @@ uint4_t Cpu::mem_read(uint4_t page, std::uint8_t step) const {
         }
     } else if (page == 0xF) {
         // TODO: Implement check for readability (see io_read)
-        return ram.pageF[H][L];
+        uint4_t val = ram.pageF[H][L];
+        // F00H-F05H: interrupt factor flags are cleared by reading them
+        if (H == 0 && L < 6) ram.pageF[H][L] = 0;
+        return val;
     } else {
         std::printf("Cannot read from page %X, step %X%XH\n", page, H, L);
         return 0xF;
     }
 }
 
-uint4_t Cpu::io(IoReg r) const { return ram.pageF[r.h][r.l] & r.mask; }
+uint4_t Cpu::io_read(IoReg r) const { 
+    return ram.pageF[r.h][r.l] & r.mask; 
+}
 
-uint4_t Cpu::reg_read(uint4_t reg_id) const {
+void Cpu::io_write(IoReg r, bool v) {
+    if (v) {
+        ram.pageF[r.h][r.l] |= r.mask;
+    } else {
+        ram.pageF[r.h][r.l] &= ~r.mask;
+    }
+}
+
+std::uint8_t Cpu::io_read8(uint4_t h, uint4_t l) const {
+    return (ram.pageF[h][l + 1] << 4) | ram.pageF[h][l];
+}
+
+void Cpu::io_write8(uint4_t h, uint4_t l, std::uint8_t v) {
+    ram.pageF[h][l] = lo(v);
+    ram.pageF[h][l + 1] = hi(v);
+}
+
+uint4_t Cpu::reg_read(uint4_t reg_id) {
     switch (reg_id) {
         case 0: return reg.A;
         case 1: return reg.B;
@@ -214,7 +236,13 @@ void Cpu::pop_pc() {
 
 
 void Cpu::tick() {
+    // Timers run off OSC1, so they keep going during HALT and multi-cycle ops
+    timers_tick();
+
     if (clock_wait) { clock_wait--; return; }
+
+    // Interrupts are taken between instructions, and wake the CPU from HALT
+    if (service_interrupt()) return;
 
     if (halt) { halt_ticks++; return; }
 
@@ -357,4 +385,5 @@ void Cpu::tick() {
     if (instr_H7 != 0x72) {
         reg.PC.tick();
     }
+    after_pset = instr_H7 == 0x72;
 }

@@ -20,6 +20,10 @@ constexpr uint8_t seg_pos[] = {
     0x16, 0x15, 0x14, 0x13, 0x12, 0x11, 0x10, 0x25, 0x26, 0x27,
 };
 
+constexpr IoReg LCD_ALL_ON   {0x7, 0x1, 0x4};
+constexpr IoReg LCD_ALL_OFF  {0x7, 0x1, 0x8};
+constexpr IoReg LCD_CONTRAST {0x7, 0x2, 0xF};
+
 // Place one lit LCD dot into the frame.
 void map_dot(LcdFrame& frame, unsigned seg, unsigned com) {
     if (seg_pos[seg] < LcdFrame::width) {
@@ -33,35 +37,32 @@ void map_dot(LcdFrame& frame, unsigned seg, unsigned com) {
     }
 }
 
-static constexpr uint8_t LCD_ALL_OFF    = 0x8; 
-static constexpr uint8_t LCD_ALL_ON     = 0x4;
-
 } // namespace
 
 void Cpu::lcd_frame(LcdFrame* frame) const {
     *frame = LcdFrame{};
     
-    if (io(ALON)) {
+    if (io_read(LCD_ALL_ON)) {
         frame->screen.fill(0xFFFF);
         return;
-    } else if (io(ALOFF)) {
+    } else if (io_read(LCD_ALL_OFF)) {
         frame->screen.fill(0x0000);
         return;
     }
 
-    frame->contrast = io(LC);
+    frame->contrast = io_read(LCD_CONTRAST);
 
-    for (unsigned H = 0; H < 16; H++) {
+    for (uint8_t H = 0; H < 16; H++) {
         if (!(H < 5 || (H >= 8 && H < 0xD))) continue;
 
-        for (unsigned L = 0; L < 16; L++) {
-            unsigned addr = (H << 4) | L;
+        for (uint8_t L = 0; L < 16; L++) {
+            uint8_t addr = (H << 4) | L;
             uint4_t dots = ram.pageE[H][L];
 
-            unsigned seg = (addr & 0x7F) >> 1;
-            unsigned com0 = ((addr & 0x80) >> 4) | ((addr & 0x1) << 2);
+            uint8_t seg = (addr & 0x7F) >> 1;
+            uint8_t com0 = ((addr & 0x80) >> 4) | ((addr & 0x1) << 2);
 
-            for (unsigned bit = 0; bit < 4; bit++) {
+            for (uint8_t bit = 0; bit < 4; bit++) {
                 if (dots & (1u << bit)) {
                     map_dot(*frame, seg, com0 + bit);
                 }

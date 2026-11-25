@@ -154,9 +154,12 @@ struct InstrRecord {
 };
 
 struct IoReg { uint4_t h, l, mask; };
-constexpr IoReg ALOFF{0x7, 0x1, 0x8};
-constexpr IoReg ALON{0x7, 0x1, 0x4};
-constexpr IoReg LC{0x7, 0x2, 0xF};
+
+// Hidden timer state that isn't visible in the I/O registers (cpu_timer.cpp)
+struct TimerState {
+    std::uint8_t osc_div = 0;  // OSC1 prescaler, wraps at 128 (-> 256 Hz)
+    std::uint8_t sw_div = 0;   // 256 Hz ticks since the stopwatch's last SWL count
+};
 
 class Cpu {
 public:
@@ -171,6 +174,8 @@ public:
     Ram ram;
     std::uint8_t clock_wait = 0;
     bool halt = false;
+    bool after_pset = false;  // last instruction was PSET; interrupts wait one more
+    TimerState timers;
 
     // Keep a ring buffer of recently executed instructions (off by default).
     // history[history_pos] is the oldest entry / the next slot to be written.
@@ -203,14 +208,30 @@ private:
 
     // RAM read/write
     void mem_write(uint4_t page, std::uint8_t step, uint4_t val);
-    uint4_t mem_read(uint4_t page, std::uint8_t step) const;
-
-    // IO register helper
-    uint4_t io(IoReg r) const;
+    uint4_t mem_read(uint4_t page, std::uint8_t step);
 
     // Register read/write
     void reg_write(uint4_t reg_id, uint4_t val);
-    uint4_t reg_read(uint4_t reg_id) const;
+    uint4_t reg_read(uint4_t reg_id);
+
+    // Interrupts (cpu_int.cpp). Takes a pending, enabled interrupt if there
+    // is one, returning true if it did.
+    bool service_interrupt();
+
+    // Timers (cpu_timer.cpp)
+    void timers_tick();
+    void timers_io_write(uint4_t h, uint4_t l);
+    void clock_timer_set(std::uint8_t tm);
+    void stopwatch_step();
+    void prog_timer_step();
+
+    // IO register helper
+    uint4_t io_read(IoReg r) const;
+    void io_write(IoReg r, bool v);
+
+    // 8-bit value stored as two I/O nibbles, low nibble at [h][l]
+    std::uint8_t io_read8(uint4_t h, uint4_t l) const;
+    void io_write8(uint4_t h, uint4_t l, std::uint8_t v);
 
     // Instruction lookup
     std::uint16_t prefetch();

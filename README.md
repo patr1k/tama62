@@ -17,8 +17,8 @@ The original Tamagotchi was an incredibly simple yet addictive toy. Its specs ar
 
 - [x] E0C6200 CPU Emulator
 - [x] 32.768 kHz Program Runner
-- [ ] Timers
-- [ ] Interrupts
+- [x] Timers
+- [x] Interrupts
 - [x] LCD Display
 - [ ] Input Ports
 - [ ] Sound Generator

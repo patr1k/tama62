@@ -7,7 +7,7 @@ BUILD_DIR := build
 
 SRCS := main.cpp cpu.cpp \
         cpu_branch.cpp cpu_sys.cpp cpu_idx.cpp cpu_data.cpp \
-        cpu_flag.cpp cpu_stack.cpp cpu_alu.cpp cpu_lcd.cpp \
+        cpu_flag.cpp cpu_stack.cpp cpu_alu.cpp cpu_lcd.cpp cpu_timer.cpp cpu_int.cpp \
         display.cpp monitor.cpp
 OBJS := $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
 HDRS := $(wildcard $(SRC_DIR)/*.hpp)
