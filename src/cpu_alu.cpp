@@ -284,7 +284,7 @@ void Cpu::op_acpx_mx_r(std::uint16_t instr) {
 void Cpu::op_acpy_my_r(std::uint16_t instr) {
     uint4_t r = instr & 0x3;
     log_instr("ACPY MY, %s\n", reg_names[r]);
-    uint4_t result = alu_add(mem_read(reg.YP, reg.XHL), reg_read(r), true);
+    uint4_t result = alu_add(mem_read(reg.YP, reg.YHL), reg_read(r), true);
     mem_write(reg.YP, reg.YHL, result);
     reg.YHL++;
     clock_wait = 6;
@@ -304,7 +304,7 @@ void Cpu::op_scpx_mx_r(std::uint16_t instr) {
 void Cpu::op_scpy_my_r(std::uint16_t instr) {
     uint4_t r = instr & 0x3;
     log_instr("SCPY MY, %s\n", reg_names[r]);
-    uint4_t result = alu_sub(mem_read(reg.YP, reg.XHL), reg_read(r), true);
+    uint4_t result = alu_sub(mem_read(reg.YP, reg.YHL), reg_read(r), true);
     mem_write(reg.YP, reg.YHL, result);
     reg.YHL++;
     clock_wait = 6;
